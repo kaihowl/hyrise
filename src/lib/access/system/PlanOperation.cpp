@@ -17,6 +17,8 @@
 #include "log4cxx/logger.h"
 #include <algorithm>
 
+#include "optional.hpp"
+
 namespace {
 auto logger = log4cxx::Logger::getLogger("access.plan.PlanOperation");
 }
@@ -193,9 +195,31 @@ const PlanOperation* PlanOperation::execute() {
     std::string threadId = boost::lexical_cast<std::string>(std::this_thread::get_id());
     unsigned core = getCurrentCore();
     unsigned node = getCurrentNode();
+
+    std::optional<size_t> in_size;
+    if (const auto& in = getInputTable()) {
+      in_size = in->size();
+    }
+
+    std::optional<size_t> out_size;
+    if (const auto& out = getResultTable()) {
+      out_size = out->size();
+    }
+
     *_performance_attr = (performance_attributes_t) {
-        pt.value("PAPI_TOT_CYC"), pt.value(getEvent()), getEvent(), planOperationName(), _operatorId,
-        startTime,                endTime,              threadId,   core,                node};
+        pt.value("PAPI_TOT_CYC"),
+        pt.value(getEvent()),
+        getEvent(),
+        planOperationName(),
+        _operatorId,
+        startTime,
+        endTime,
+        threadId,
+        core,
+        node,
+        in_size,
+        out_size
+    };
   }
 
   setState(OpSuccess);

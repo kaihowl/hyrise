@@ -18,6 +18,8 @@
 #include "storage/meta_storage.h"
 #include "io/GroupCommitter.h"
 
+#include "optional.hpp"
+
 
 namespace hyrise {
 namespace access {
@@ -173,6 +175,9 @@ Json::Value ResponseTask::generateResponseJson() {
         element["executingThread"] = Json::Value(attr->executingThread);
         element["lastCore"] = Json::Value(attr->core);
         element["lastNode"] = Json::Value(attr->node);
+        // Put null for in/outRows if -1 was set
+        element["inRows"] = attr->in_rows ? Json::Value(*(attr->in_rows)) : Json::Value();
+        element["outRows"] = attr->out_rows ? Json::Value(*(attr->out_rows)) : Json::Value();
         json_perf.append(element);
       }
 
@@ -190,6 +195,13 @@ Json::Value ResponseTask::generateResponseJson() {
 
       responseElement["lastCore"] = Json::Value(getCurrentCore());
       responseElement["lastNode"] = Json::Value(getCurrentNode());
+
+      std::optional<size_t> result_size;
+      if (result) {
+        result_size = result->size();
+      }
+      responseElement["inRows"] = result_size ? Json::Value(*result_size) : Json::Value();
+      responseElement["outRows"] = Json::Value();
 
       json_perf.append(responseElement);
 
