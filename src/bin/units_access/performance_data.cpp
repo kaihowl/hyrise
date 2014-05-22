@@ -61,7 +61,5 @@ TEST_F(PerformanceDataTests, no_rows_test) {
   ASSERT_EQ(perf.in_rows, std::nullopt);
   ASSERT_EQ(perf.out_rows, std::nullopt);
 }
-
-
 }
 }

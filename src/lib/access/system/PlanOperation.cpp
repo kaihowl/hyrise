@@ -207,19 +207,8 @@ const PlanOperation* PlanOperation::execute() {
     }
 
     *_performance_attr = (performance_attributes_t) {
-        pt.value("PAPI_TOT_CYC"),
-        pt.value(getEvent()),
-        getEvent(),
-        planOperationName(),
-        _operatorId,
-        startTime,
-        endTime,
-        threadId,
-        core,
-        node,
-        in_size,
-        out_size
-    };
+        pt.value("PAPI_TOT_CYC"), pt.value(getEvent()), getEvent(), planOperationName(), _operatorId, startTime,
+        endTime,                  threadId,             core,       node,                in_size,     out_size};
   }
 
   setState(OpSuccess);
