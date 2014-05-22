@@ -6,6 +6,8 @@
 #include "storage/AbstractResource.h"
 #include "storage/PointerCalculator.h"
 
+#include "taskscheduler/Task.h"
+
 #include "access/PipelineObserver.h"
 #include "helper/locking.h"
 #include "helper/Synchronized.h"
@@ -21,7 +23,7 @@ class PipelineUnion : public PlanOperation, public PipelineObserver<PipelineUnio
   void executePlanOperation() override;
 
   // custom implementation just collecting chunks. Union happens on final executePlanOperation()
-  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk) override;
+  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t source_task) override;
 
  private:
   Synchronized<OperationData, std::mutex> _pipelineInput;

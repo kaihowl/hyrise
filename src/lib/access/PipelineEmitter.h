@@ -19,8 +19,8 @@ class PipelineEmitter {
  protected:
   virtual void emitChunk(storage::c_aresource_ptr_t chunk) {
     auto observers = static_cast<U*>(this)->template getAllSuccessorsOf<AbstractPipelineObserver>();
-    std::for_each(observers.begin(), observers.end(), [&chunk](std::shared_ptr<AbstractPipelineObserver>& obs) {
-      obs->notifyNewChunk(chunk);
+    std::for_each(observers.begin(), observers.end(), [&chunk, this](std::shared_ptr<AbstractPipelineObserver>& obs) {
+      obs->notifyNewChunk(chunk, static_cast<U*>(this)->shared_from_this());
     });
   }
 

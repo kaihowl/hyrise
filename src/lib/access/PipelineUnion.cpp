@@ -35,7 +35,7 @@ storage::c_atable_ptr_t PipelineUnion::unionTables(std::vector<storage::c_atable
   return std::make_shared<const storage::HorizontalTable>(tables);
 }
 
-void PipelineUnion::notifyNewChunk(storage::c_aresource_ptr_t chunk) {
+void PipelineUnion::notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t source_task) {
   LOG4CXX_DEBUG(_pipelineLogger, "Got new table chunk.");
   _pipelineInput([&chunk](OperationData& pipelineInput) { pipelineInput.addResource(chunk); });
 }

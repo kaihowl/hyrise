@@ -18,10 +18,11 @@ namespace access {
  * Manual mock object.
  * Will store all unique received chunks and provides a count of them.
  */
+  // TODO test for right source task
 class TestObserver : public PlanOperation, public PipelineObserver<TestObserver> {
  public:
   void executePlanOperation() override {}
-  void notifyNewChunk(storage::c_aresource_ptr_t chunkTbl) override {
+  void notifyNewChunk(storage::c_aresource_ptr_t chunkTbl, taskscheduler::task_ptr_t source_task) override {
     _receivedChunks([&chunkTbl](std::set<storage::c_aresource_ptr_t>& receivedChunks) {
       receivedChunks.insert(chunkTbl);
     });

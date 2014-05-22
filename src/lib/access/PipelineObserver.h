@@ -8,6 +8,7 @@
 #include <log4cxx/logger.h>
 
 #include "taskscheduler/SharedScheduler.h"
+#include "taskscheduler/Task.h"
 #include "access/system/ResponseTask.h"
 #include "access/system/PlanOperation.h"
 
@@ -28,7 +29,7 @@ log4cxx::LoggerPtr _observerLogger(log4cxx::Logger::getLogger("pipelining.Pipeli
 class AbstractPipelineObserver {
  public:
   virtual ~AbstractPipelineObserver();
-  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk) = 0;
+  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t source_task) = 0;
 };
 
 /*
@@ -42,15 +43,18 @@ class AbstractPipelineObserver {
 template <class T>
 class PipelineObserver : public AbstractPipelineObserver {
  public:
-  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk) {
+  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t source_task) override {
     auto opName = static_cast<T*>(this)->planOperationName();
     auto opId = static_cast<T*>(this)->getOperatorId();
 
     LOG4CXX_DEBUG(_observerLogger, opId << ": notifyNewChunk");
 
-    auto copy = static_cast<T*>(this)->copy();
+    // TODO maybe remove the copy from the planop. Make it a clone instead
+    // TODO that would clean up the code
+    auto copy = std::static_pointer_cast<T>(static_cast<T*>(this)->copy());
     copy->setPlanOperationName(opName + "_chunk");
     copy->setOperatorId(getChunkIdentifier(opId));
+    std::static_pointer_cast<PipelineObserver<T>>(copy)->_source_task = source_task;
 
     // input for this new instance is chunk
     copy->addInput(chunk);
@@ -81,6 +85,7 @@ class PipelineObserver : public AbstractPipelineObserver {
    * do it here.
    */
   virtual void addCustomDependencies(taskscheduler::task_ptr_t newChunkTask) {}
+  taskscheduler::task_ptr_t _source_task;
 };
 }
 }
