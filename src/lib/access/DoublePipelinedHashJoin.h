@@ -14,7 +14,10 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
 
  public:
   void executePlanOperation() override;
+  void setupPlanOperation() override;
+
   static std::shared_ptr<PlanOperation> parse(const Json::Value& data);
+  virtual std::shared_ptr<PlanOperation> copy() override;
 
  private:
   // TODO maybe we should use the same hasher as in other multimap here
@@ -23,7 +26,7 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
   typedef tbb::concurrent_unordered_multimap<join_key_t, join_value_t> hashtable_t;
   typedef std::shared_ptr<hashtable_t> hashtable_ptr_t;
 
-  hashtable_ptr_t hashtable;
+  hashtable_ptr_t _hashtable;
 };
 }
 }
