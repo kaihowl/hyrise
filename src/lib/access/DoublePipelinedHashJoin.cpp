@@ -1,4 +1,5 @@
 #include "access/DoublePipelinedHashJoin.h"
+#include "storage/meta_storage.h"
 
 namespace hyrise {
 namespace access {
@@ -14,7 +15,28 @@ void DoublePipelinedHashJoin::setupPlanOperation() {
 }
 
 void DoublePipelinedHashJoin::executePlanOperation() {
-  // TODO implement
+  const auto& input = getInputTable();
+  if (!input) {
+    return;
+  }
+
+  // // TODO
+  // determine index of source op
+  size_t f = 0;
+
+  for (pos_t row = 0; row < input->size(); ++row) {
+    //insert into hashtable
+    row_hash_functor<join_key_t> fun(input.get(), f, row);
+    storage::type_switch<hyrise_basic_types> ts;
+    join_key_t hash = ts(input->typeOfColumn(f), fun);
+    // TODO insert the source table as well!!!
+    _hashtable->insert(hashtable_t::value_type(hash, row));
+  //iterator over rows.
+  //get matching_rows
+  //filter by table
+  //construct output table
+  //TODO later emit chunks of required chunk size
+  }
 }
 
 std::shared_ptr<PlanOperation> DoublePipelinedHashJoin::parse(const Json::Value& data) {
