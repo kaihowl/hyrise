@@ -189,6 +189,24 @@ class Task : public TaskDoneObserver, public std::enable_shared_from_this<Task> 
   }
 
   /*
+   * Get the index of the supplied dependency. Throws exception if argument is
+   * not dependency.
+   */
+  size_t getDependencyIndex(task_ptr_t& dependency) {
+    std::vector<task_ptr_t> targets;
+    {
+      std::lock_guard<decltype(this->_depMutex)> lk(_depMutex);
+      targets = _dependencies;
+    }
+    for (size_t i = 0; i < targets.size(); ++i) {
+      if (dependency == targets[i]) {
+        return i;
+      }
+    }
+    throw std::runtime_error("Argument is not a dependency.");
+  }
+
+  /*
    * whether this task is ready to run / has open dependencies
    */
   bool isReady();
