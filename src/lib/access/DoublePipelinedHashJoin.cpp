@@ -22,7 +22,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   // // TODO
   // determine index of source op
-  size_t f = 0;
+  // TODO maybe only set the required field on the index upon copy
+  field_t f = _indexed_field_definition[_source_task_index];
 
   for (pos_t row = 0; row < input->size(); ++row) {
     //insert into hashtable

@@ -54,7 +54,9 @@ class PipelineObserver : public AbstractPipelineObserver {
     auto copy = std::static_pointer_cast<T>(static_cast<T*>(this)->copy());
     copy->setPlanOperationName(opName + "_chunk");
     copy->setOperatorId(getChunkIdentifier(opId));
-    std::static_pointer_cast<PipelineObserver<T>>(copy)->_source_task = source_task;
+    auto copy_obs = std::static_pointer_cast<PipelineObserver<T>>(copy);
+    copy_obs->_source_task = source_task;
+    copy_obs->_source_task_index = static_cast<T*>(this)->getDependencyIndex(source_task);
 
     // input for this new instance is chunk
     copy->addInput(chunk);
@@ -85,7 +87,9 @@ class PipelineObserver : public AbstractPipelineObserver {
    * do it here.
    */
   virtual void addCustomDependencies(taskscheduler::task_ptr_t newChunkTask) {}
+
   taskscheduler::task_ptr_t _source_task;
+  size_t _source_task_index;
 };
 }
 }
