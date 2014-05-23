@@ -91,8 +91,14 @@ void DoublePipelinedHashJoin::executePlanOperation() {
   auto other_table_ht = std::make_shared<storage::HorizontalTable>(horizontal_parts);
 
   std::vector<storage::atable_ptr_t> parts;
-  parts.push_back(this_table_pc);
-  parts.push_back(other_table_ht);
+
+  if (_source_task_index == 0) {
+    parts.push_back(this_table_pc);
+    parts.push_back(other_table_ht);
+  } else {
+    parts.push_back(other_table_ht);
+    parts.push_back(this_table_pc);
+  }
 
   storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
   addResult(result);
