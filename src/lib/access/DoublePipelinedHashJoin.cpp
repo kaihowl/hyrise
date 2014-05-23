@@ -6,12 +6,10 @@ namespace hyrise {
 namespace access {
 
 DoublePipelinedHashJoin::DoublePipelinedHashJoin() : PlanOperation() {
-  // TODO do i need to call the super constructor?
   _hashtable = std::make_shared<hashtable_t>();
 }
 
 DoublePipelinedHashJoin::DoublePipelinedHashJoin(const DoublePipelinedHashJoin& original) : PlanOperation() {
-  // TODO do i need to call the super constructor?
   _hashtable = original._hashtable;
 }
 
