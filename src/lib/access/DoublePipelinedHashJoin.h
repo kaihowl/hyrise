@@ -33,8 +33,16 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
 
 
  public:
+  // standard constructor will create a hashtable
+  DoublePipelinedHashJoin();
+  // Copy constructor will reuse the hashtable of the original operation
+  // in order to have a shared data structure between all copies
+  // TODO If you need a copy constructor, you also need a destructor and operator=
+  // source:
+  // http://www.fredosaurus.com/notes-cpp/oop-condestructors/copyconstructors.html
+  DoublePipelinedHashJoin(const DoublePipelinedHashJoin& original);
+
   void executePlanOperation() override;
-  void setupPlanOperation() override;
 
   static std::shared_ptr<PlanOperation> parse(const Json::Value& data);
   virtual std::shared_ptr<PlanOperation> copy() override;

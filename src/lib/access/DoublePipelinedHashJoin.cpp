@@ -4,14 +4,14 @@
 namespace hyrise {
 namespace access {
 
-void DoublePipelinedHashJoin::setupPlanOperation() {
-  // If this is a copied operation, hashtable will be provided
-  if (_hashtable) {
-    return;
-  }
-
-  //only the original operation needs to construct one hashtable
+DoublePipelinedHashJoin::DoublePipelinedHashJoin() : PlanOperation() {
+  // TODO do i need to call the super constructor?
   _hashtable = std::make_shared<hashtable_t>();
+}
+
+DoublePipelinedHashJoin::DoublePipelinedHashJoin(const DoublePipelinedHashJoin& original) : PlanOperation() {
+  // TODO do i need to call the super constructor?
+  _hashtable = original._hashtable;
 }
 
 void DoublePipelinedHashJoin::executePlanOperation() {
@@ -20,7 +20,6 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     return;
   }
 
-  // // TODO
   // determine index of source op
   // TODO maybe only set the required field on the index upon copy
   field_t f = _indexed_field_definition[_source_task_index];
@@ -52,7 +51,7 @@ std::shared_ptr<PlanOperation> DoublePipelinedHashJoin::parse(const Json::Value&
 }
 
 std::shared_ptr<PlanOperation> DoublePipelinedHashJoin::copy(){
-  auto instance = std::make_shared<DoublePipelinedHashJoin>();
+  auto instance = std::make_shared<DoublePipelinedHashJoin>(*this);
   for (auto field : _indexed_field_definition) {
     instance->addField(field);
   }
