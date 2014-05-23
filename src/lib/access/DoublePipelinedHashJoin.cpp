@@ -1,4 +1,5 @@
 #include "access/DoublePipelinedHashJoin.h"
+#include "access/system/QueryParser.h"
 
 #include "storage/meta_storage.h"
 #include "storage/storage_types.h"
@@ -10,6 +11,10 @@
 
 namespace hyrise {
 namespace access {
+
+namespace {
+  auto _ = QueryParser::registerPlanOperation<DoublePipelinedHashJoin>("DoublePipelinedHashJoin");
+}
 
 DoublePipelinedHashJoin::DoublePipelinedHashJoin() : PlanOperation() {
   _hashtable = std::make_shared<hashtable_t>();
@@ -76,6 +81,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   for (const auto& cur_pair : other_rows) pos_by_tables[cur_pair.first].push_back(cur_pair.second);
 
+  // TODO let's create this table once in the parent op and do some pos_list
+  // magic for a pointer calculator on it.
   std::vector<storage::c_atable_ptr_t> horizontal_parts;
 
   for (const auto& table_pos_list_pair : pos_by_tables) {
