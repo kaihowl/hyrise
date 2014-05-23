@@ -1,0 +1,50 @@
+{
+    "operators": {
+        "-1": {
+          "type": "TableLoad",
+          "table": "reference",
+          "filename": "tables/companies_employees_double_joined.tbl"
+        },
+        "0": {
+          "type": "TableLoad",
+          "table": "companies",
+          "filename": "tables/companies.tbl"
+        },
+        "1": {
+          "type": "TableLoad",
+          "table": "employees",
+          "filename": "tables/employees.tbl"
+        },
+        "2": {
+          "type": "PipelineStream",
+          "chunkSize": 1
+        },
+        "3": {
+          "type": "PipelineStream",
+          "chunkSize": 1
+          //"fields": [0],
+        },
+        "4": {
+          "type": "DoublePipelinedHashJoin",
+          "chunkSize": 1,
+          "fields": [0,1]
+        },
+        "5": {
+          "type": "DoublePipelinedHashJoin",
+          "chunkSize": 1,
+          "fields": [0,0]
+        },
+        "6": {
+          "type": "PipelineUnion"
+        }
+    },
+    "edges": [
+      ["0", "2"],
+      ["1", "3"],
+      ["2", "4"],
+      ["3", "4"],
+      ["3", "5"],
+      ["4", "5"],
+      ["5", "6"]
+    ]
+}
