@@ -50,6 +50,7 @@ class PipelineObserver : public AbstractPipelineObserver {
     LOG4CXX_DEBUG(_observerLogger, opId << ": notifyNewChunk");
 
     // TODO maybe remove the copy from the planop. Make it a clone instead
+    // TODO can we make use of the copy constructor / assignment here?
     // TODO that would clean up the code
     auto copy = std::static_pointer_cast<T>(static_cast<T*>(this)->copy());
     copy->setPlanOperationName(opName + "_chunk");
