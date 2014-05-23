@@ -76,7 +76,6 @@ std::shared_ptr<PlanOperation> DoublePipelinedHashJoin::copy(){
     instance->addField(field);
   }
   instance->_chunkSize = _chunkSize;
-  instance->_hashtable = _hashtable;
   return instance;
 }
 }
