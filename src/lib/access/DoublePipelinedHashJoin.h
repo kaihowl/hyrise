@@ -5,6 +5,7 @@
 #include "access/system/PlanOperation.h"
 
 #include "tbb/concurrent_unordered_map.h"
+#include "tbb/concurrent_vector.h"
 
 #include "storage/storage_types.h"
 #include "storage/meta_storage.h"
@@ -50,7 +51,7 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
  private:
   // TODO maybe we should use the same hasher as in other multimap here
   typedef size_t join_key_t ;
-  typedef std::pair<taskscheduler::task_ptr_t, pos_t> join_value_t;
+  typedef std::tuple<taskscheduler::Task*, const storage::AbstractTable*, storage::pos_t> join_value_t;
   typedef tbb::concurrent_unordered_multimap<join_key_t, join_value_t> hashtable_t;
   typedef std::shared_ptr<hashtable_t> hashtable_ptr_t;
 
@@ -58,6 +59,10 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
   // all values will be hashed before. This is a hacky way of "casting" them to
   // a common datatype. (This is also in place for the storage::HashTable.)
   hashtable_ptr_t _hashtable;
+
+  // this is just there to manage the lifetime of chunks
+  // it enables us to safely store references to shared_ptr in the hashtable
+  std::shared_ptr<tbb::concurrent_vector<storage::c_atable_ptr_t>> _chunk_tables;
 };
 }
 }
