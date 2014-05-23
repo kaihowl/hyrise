@@ -1,8 +1,10 @@
 #include "access/DoublePipelinedHashJoin.h"
 
 #include "storage/meta_storage.h"
-#include "storage/TableRangeView.h"
+#include "storage/storage_types.h"
 #include "storage/PointerCalculator.h"
+#include "storage/HorizontalTable.h"
+#include "storage/MutableVerticalTable.h"
 
 #include <algorithm>
 
@@ -31,7 +33,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
   // TODO maybe only set the required field on the index upon copy
   field_t f = _indexed_field_definition[_source_task_index];
 
-  storage::pos_list_t this_rows, other_rows;
+  storage::pos_list_t* this_rows = new pos_list_t();
+  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
 
   for (pos_t row = 0; row < input->size(); ++row) {
     //insert into hashtable
@@ -61,30 +64,42 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> matching_tables_rows;
     std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const storage::AbstractTable*, storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
 
-    //if (!matching_rows.empty()) {
-      //this_rows.insert(this_rows.end(), matching_rows.size(), row);
-      //other_rows.insert(other_rows.end(), matching_rows.begin(), matching_rows.end());
-    //}
+    if (!matching_tables_rows.empty()) {
+      this_rows->insert(this_rows->end(), matching_tables_rows.size(), row);
+      other_rows.insert(other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
+    }
   }
 
-  //if ((*_source_tables)[0] && (*_source_tables)[1]) {
-    //std::vector<storage::atable_ptr_t> parts;
+  auto this_table_pc = storage::PointerCalculator::create(input, std::move(this_rows));
 
-    //auto this_table_pc = storage::PointerCalculator::create((*_source_tables)[_source_task_index]);
-    //// TODO this can be handled nicer, ey?
-    //auto other_index = _source_task_index == 0 ? 1 : 0;
-    //auto other_table_pc = storage::PointerCalculator::create((*_source_tables)[other_index]);
+  std::unordered_map<const storage::AbstractTable*, pos_list_t> pos_by_tables;
 
-    //parts.push_back(this_table_pc);
-    //parts.push_back(other_table_pc);
+  for (const auto& cur_pair : other_rows) pos_by_tables[cur_pair.first].push_back(cur_pair.second);
 
-    //storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
-    //addResult(result);
-  //}
+  std::vector<storage::c_atable_ptr_t> horizontal_parts;
+
+  for (const auto& table_pos_list_pair : pos_by_tables) {
+    const auto& table = table_pos_list_pair.first;
+    // TODO store the iterator instead of the table pointer.
+    const auto& shared_table = std::find_if(_chunk_tables->begin(), _chunk_tables->end(), [&table](const storage::c_atable_ptr_t& val) { return val.get() == table; });
+    const auto& pos_list = table_pos_list_pair.second;
+    // TODO maybe move is wrong here since we did not create the object
+    auto part = storage::PointerCalculator::create(*shared_table, std::move(pos_list));
+    horizontal_parts.push_back(part);
+  }
+
+  auto other_table_ht = std::make_shared<storage::HorizontalTable>(horizontal_parts);
+
+  std::vector<storage::atable_ptr_t> parts;
+  parts.push_back(this_table_pc);
+  parts.push_back(other_table_ht);
+
+  storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
+  addResult(result);
 
   //TODO later emit chunks of required chunk size
-  //
-  // emits nothing if not both source tables had been available
+  
+  //emits nothing if not both source tables had been available
 
 }
 
