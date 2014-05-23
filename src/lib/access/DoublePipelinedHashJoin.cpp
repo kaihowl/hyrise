@@ -30,7 +30,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     storage::type_switch<hyrise_basic_types> ts;
     join_key_t hash = ts(input->typeOfColumn(f), fun);
     // TODO insert the source table as well!!!
-    _hashtable->insert(hashtable_t::value_type(hash, row));
+    _hashtable->insert(hashtable_t::value_type(hash, std::pair<taskscheduler::task_ptr_t, pos_t>(_source_task, row)));
   //iterator over rows.
   //get matching_rows
   //filter by table
