@@ -75,6 +75,10 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     }
   }
 
+  if (!this_rows->size()) { // no result to produce
+    return;
+  }
+
   auto this_table_pc = storage::PointerCalculator::create(input, std::move(this_rows));
 
   std::unordered_map<const storage::AbstractTable*, pos_list_t> pos_by_tables;
