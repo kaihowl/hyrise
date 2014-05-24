@@ -112,7 +112,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
   }
 
   storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
-  addResult(result);
+  emitChunk(result);
 
   //TODO later emit chunks of required chunk size
   
