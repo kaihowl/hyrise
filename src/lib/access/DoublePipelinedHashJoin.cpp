@@ -34,9 +34,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   _chunk_tables->push_back(input);
 
-  // determine index of source op
-  // TODO maybe only set the required field on the index upon copy
-  field_t f = _indexed_field_definition[_source_task_index];
+  field_t f = _indexed_field_definition[_source_index];
 
   storage::pos_list_t* this_rows = new pos_list_t();
   std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
@@ -47,7 +45,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     storage::type_switch<hyrise_basic_types> ts;
     join_key_t hash = ts(input->typeOfColumn(f), fun);
     // Store absolute positions
-    join_value_t val = std::make_tuple(_source_task.get(), input.get(), row);
+    join_value_t val = std::make_tuple(_source_index, input.get(), row);
     hashtable_t::value_type insert_key(hash, val);
     _hashtable->insert(insert_key);
 
@@ -64,7 +62,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
     std::vector<hashtable_t::value_type> matching_keys;
     // only use matching rows not in our table
-    std::remove_copy_if(all_matches_start, matches_end, back_inserter(matching_keys), [this] (const hashtable_t::value_type& val) { return std::get<0>(val.second) == _source_task.get(); });
+    std::remove_copy_if(all_matches_start, matches_end, back_inserter(matching_keys), [this] (const hashtable_t::value_type& val) { return std::get<0>(val.second) == _source_index; });
 
     std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> matching_tables_rows;
     std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const storage::AbstractTable*, storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
@@ -103,7 +101,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   std::vector<storage::atable_ptr_t> parts;
 
-  if (_source_task_index == 0) {
+  if (_source_index == 0) {
     parts.push_back(this_table_pc);
     parts.push_back(other_table_ht);
   } else {

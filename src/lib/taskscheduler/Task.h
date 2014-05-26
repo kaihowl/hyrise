@@ -192,7 +192,7 @@ class Task : public TaskDoneObserver, public std::enable_shared_from_this<Task> 
    * Get the index of the supplied dependency. Throws exception if argument is
    * not dependency.
    */
-  size_t getDependencyIndex(task_ptr_t& dependency) {
+  size_t getDependencyIndex(const task_ptr_t& dependency) {
     std::vector<task_ptr_t> targets;
     {
       std::lock_guard<decltype(this->_depMutex)> lk(_depMutex);

@@ -29,7 +29,18 @@ log4cxx::LoggerPtr _observerLogger(log4cxx::Logger::getLogger("pipelining.Pipeli
 class AbstractPipelineObserver {
  public:
   virtual ~AbstractPipelineObserver();
-  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t source_task) = 0;
+  /*
+   * source is the original task, i.e. the parent if the emitter is copied,
+   * otherwise the emitter iself.
+   */
+  virtual void notifyNewChunk(storage::c_aresource_ptr_t chunk, taskscheduler::task_ptr_t emitter) = 0;
+
+  taskscheduler::task_ptr_t getParent() {
+    return _parent;
+  }
+
+ protected:
+  taskscheduler::task_ptr_t _parent;
 };
 
 /*
@@ -54,10 +65,25 @@ class PipelineObserver : public AbstractPipelineObserver {
     // TODO that would clean up the code
     auto copy = std::static_pointer_cast<T>(static_cast<T*>(this)->copy());
     copy->setPlanOperationName(opName + "_chunk");
-    copy->setOperatorId(getChunkIdentifier(opId));
+    const auto id = getChunkIdentifier(opId);
+    copy->setOperatorId(id);
     auto copy_obs = std::static_pointer_cast<PipelineObserver<T>>(copy);
-    copy_obs->_source_task = source_task;
-    copy_obs->_source_task_index = static_cast<T*>(this)->getDependencyIndex(source_task);
+    copy_obs->_parent = static_cast<T*>(this)->shared_from_this();
+
+    taskscheduler::task_ptr_t original_task;
+    // Determine source of chunk
+    if (auto source_observer = std::dynamic_pointer_cast<AbstractPipelineObserver>(source_task)) {
+      // it might have a parent
+      if (auto source_parent = source_observer->getParent()) {
+        original_task = source_parent;
+      } else {
+        original_task = std::dynamic_pointer_cast<taskscheduler::Task>(source_observer);
+      }
+    } else {
+      original_task = source_task;
+    }
+
+    copy_obs->_source_index = static_cast<T*>(this)->getDependencyIndex(original_task);
 
     // input for this new instance is chunk
     copy->addInput(chunk);
@@ -89,8 +115,7 @@ class PipelineObserver : public AbstractPipelineObserver {
    */
   virtual void addCustomDependencies(taskscheduler::task_ptr_t newChunkTask) {}
 
-  taskscheduler::task_ptr_t _source_task;
-  size_t _source_task_index;
+  size_t _source_index;
 };
 }
 }

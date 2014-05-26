@@ -3,7 +3,6 @@
 #pragma once
 
 #include "access/PipelineObserver.h"
-#include "access/PipelineEmitter.h"
 
 #include "helper/types.h"
 
