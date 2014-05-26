@@ -55,7 +55,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     hashtable_t::iterator all_matches_start, all_matches_end;
     std::tie(all_matches_start, all_matches_end) = _hashtable->equal_range(hash);
     // find our end
-    auto matches_end = std::find(all_matches_end, all_matches_end, insert_key);
+    auto matches_end = std::find(all_matches_start, all_matches_end, insert_key);
+    assert(matches_end != all_matches_end);
 
     // TODO maybe reserve full size before.
     // TODO and use standard iterator again
