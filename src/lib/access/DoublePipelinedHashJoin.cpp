@@ -33,7 +33,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     return;
   }
 
-  const auto input_table = input.getTable(1);
+  const auto input_table = input.getTable(0);
 
   _chunk_tables->push_back(input_table);
 
