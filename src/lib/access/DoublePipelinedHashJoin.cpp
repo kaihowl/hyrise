@@ -39,26 +39,31 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   field_t f = _indexed_field_definition[_source_index];
 
-  storage::pos_list_t* this_rows = new pos_list_t();
-  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
-
+  std::vector<hashtable_t::value_type> hash_values;
+  hash_values.reserve(input_table->size());
+  //first insert into hash table
   for (pos_t row = 0; row < input_table->size(); ++row) {
-    //insert into hashtable
     row_hash_functor<join_key_t> fun(input_table.get(), f, row);
     storage::type_switch<hyrise_basic_types> ts;
     join_key_t hash = ts(input_table->typeOfColumn(f), fun);
-    // Store absolute positions
     join_value_t val = std::make_tuple(_source_index, input_table.get(), row);
     hashtable_t::value_type insert_key(hash, val);
-    _hashtable->insert(insert_key);
+    hash_values.push_back(insert_key);
+  }
 
+  _hashtable->insert(hash_values.begin(), hash_values.end());
+
+  storage::pos_list_t* this_rows = new pos_list_t();
+  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
+
+  for (const auto& hash_val : hash_values) {
     // TODO optimize if the other table is not yet available.
 
     // TODO maybe reserve full size before.
     hashtable_t::iterator all_matches_start, all_matches_end;
-    std::tie(all_matches_start, all_matches_end) = _hashtable->equal_range(hash);
+    std::tie(all_matches_start, all_matches_end) = _hashtable->equal_range(hash_val.first);
     // find our end
-    auto matches_end = std::find(all_matches_start, all_matches_end, insert_key);
+    auto matches_end = std::find(all_matches_start, all_matches_end, hash_val);
     assert(matches_end != all_matches_end);
 
     // TODO maybe reserve full size before.
@@ -72,7 +77,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const storage::AbstractTable*, storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
 
     if (!matching_tables_rows.empty()) {
-      this_rows->insert(this_rows->end(), matching_tables_rows.size(), row);
+      this_rows->insert(this_rows->end(), matching_tables_rows.size(), std::get<2>(hash_val.second));
       other_rows.insert(other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
     }
   }
