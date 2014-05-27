@@ -27,25 +27,28 @@ DoublePipelinedHashJoin::DoublePipelinedHashJoin(const DoublePipelinedHashJoin& 
 }
 
 void DoublePipelinedHashJoin::executePlanOperation() {
-  const auto& input = getInputTable();
-  if (!input) {
+  size_t num_in_tables = input.numberOfTables();
+
+  if (num_in_tables != 1) {
     return;
   }
 
-  _chunk_tables->push_back(input);
+  const auto input_table = input.getTable(1);
+
+  _chunk_tables->push_back(input_table);
 
   field_t f = _indexed_field_definition[_source_index];
 
   storage::pos_list_t* this_rows = new pos_list_t();
   std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
 
-  for (pos_t row = 0; row < input->size(); ++row) {
+  for (pos_t row = 0; row < input_table->size(); ++row) {
     //insert into hashtable
-    row_hash_functor<join_key_t> fun(input.get(), f, row);
+    row_hash_functor<join_key_t> fun(input_table.get(), f, row);
     storage::type_switch<hyrise_basic_types> ts;
-    join_key_t hash = ts(input->typeOfColumn(f), fun);
+    join_key_t hash = ts(input_table->typeOfColumn(f), fun);
     // Store absolute positions
-    join_value_t val = std::make_tuple(_source_index, input.get(), row);
+    join_value_t val = std::make_tuple(_source_index, input_table.get(), row);
     hashtable_t::value_type insert_key(hash, val);
     _hashtable->insert(insert_key);
 
@@ -78,7 +81,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     return;
   }
 
-  auto this_table_pc = storage::PointerCalculator::create(input, std::move(this_rows));
+  auto this_table_pc = storage::PointerCalculator::create(input_table, std::move(this_rows));
 
   std::unordered_map<const storage::AbstractTable*, pos_list_t> pos_by_tables;
 
