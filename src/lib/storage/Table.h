@@ -81,7 +81,7 @@ class Table : public AbstractTable {
   const ColumnMetadata& metadataAt(const size_t column_index,
                                    const size_t row_index = 0,
                                    const table_id_t table_id = 0) const override;
-
+  cpart_t getPart(std::size_t column, std::size_t row) const override;
   virtual const AbstractTable::SharedDictionaryPtr& dictionaryAt(const size_t column,
                                                                  const size_t row = 0,
                                                                  const table_id_t table_id = 0) const override;
@@ -123,6 +123,11 @@ class Table : public AbstractTable {
   void persist_scattered(const pos_list_t& elements, bool new_elements = true) const override;
 
   virtual void debugStructure(size_t level = 0) const override;
+
+  virtual void collectParts(std::list<cpart_t>& parts, size_t col_offset, size_t row_offset) const override {
+    parts.push_back({this, col_offset, row_offset});
+    // throw std::runtime_error(std::string("allPartsCollect was not implemented by ") + typeid(*this).name());
+  }
 
  private:
   enum class DICTIONARY_FLAG {

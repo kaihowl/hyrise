@@ -156,7 +156,7 @@ ValueId Table::getValueId(const size_t column, const size_t row) const {
   assert(column < width);
   ValueId valueId;
   valueId.valueId = tuples->get(column, row);
-  valueId.table = 0;
+  // valueId.table = 0;
   return valueId;
 }
 
@@ -213,7 +213,9 @@ void Table::setDictionaryAt(AbstractTable::SharedDictionaryPtr dict,
   _dictionaries[column] = dict;
 }
 
-
+AbstractTable::cpart_t Table::getPart(std::size_t column, std::size_t row) const {
+  return {this, column, row};
+}
 
 void Table::setAttributes(SharedAttributeVector doc) { tuples = doc; }
 

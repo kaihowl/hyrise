@@ -41,7 +41,7 @@ class TableRangeView : public AbstractTable, public SharedFactory<TableRangeView
   // recalculated rows and routed to underlying table if necessary
   size_t size() const;
   ValueId getValueId(const size_t column, const size_t row) const;
-
+  cpart_t getPart(std::size_t column, std::size_t row) const;
   const ColumnMetadata& metadataAt(const size_t column, const size_t row = 0, const table_id_t table_id = 0) const
       override;
 

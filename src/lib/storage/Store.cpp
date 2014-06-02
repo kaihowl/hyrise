@@ -160,6 +160,11 @@ const ColumnMetadata& Store::metadataAt(const size_t column_index,
   return delta->metadataAt(column_index, row_index - offset, table_id);
 }
 
+AbstractTable::cpart_t Store::getPart(std::size_t column, std::size_t row) const {
+  size_t offset = _main_table->size();
+  return row < offset ? _main_table->getPart(column, row) : delta->getPart(column, row - offset);
+}
+
 void Store::setDictionaryAt(AbstractTable::SharedDictionaryPtr dict,
                             const size_t column,
                             const size_t row,
@@ -206,7 +211,7 @@ void Store::setValueId(const size_t column, const size_t row, ValueId vid) {
 ValueId Store::getValueId(const size_t column, const size_t row) const {
   auto location = responsibleTable(row);
   ValueId valueId = location.table->getValueId(column, location.offset_in_table);
-  valueId.table = location.table_index;
+  // valueId.table = location.table_index;
   return valueId;
 }
 
@@ -537,6 +542,11 @@ void Store::setName(const std::string name) {
     _main_table->setName(name);
   if (delta)
     delta->setName(name);
+}
+
+void Store::collectParts(std::list<cpart_t>& parts, size_t col_offset, size_t row_offset) const {
+  _main_table->collectParts(parts, col_offset, row_offset);
+  delta->collectParts(parts, col_offset, _main_table->size());
 }
 }
 }

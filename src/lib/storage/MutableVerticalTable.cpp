@@ -54,6 +54,10 @@ const adict_ptr_t& MutableVerticalTable::dictionaryAt(const size_t column,
   return containerAt(column)->dictionaryAt(offset_in_container[column], row, table_id);
 }
 
+AbstractTable::cpart_t MutableVerticalTable::getPart(std::size_t column, std::size_t row) const {
+  return containerAt(column)->getPart(offset_in_container[column], row);
+}
+
 const adict_ptr_t& MutableVerticalTable::dictionaryByTableId(const size_t column, const table_id_t table_id) const {
   return containerAt(column)->dictionaryByTableId(offset_in_container[column], table_id);
 }
@@ -217,6 +221,13 @@ void MutableVerticalTable::debugStructure(size_t level) const {
 void MutableVerticalTable::persist_scattered(const pos_list_t& elements, bool new_elements) const {
   for (const auto& c : containers) {
     c->persist_scattered(elements, new_elements);
+  }
+}
+
+void MutableVerticalTable::collectParts(std::list<cpart_t>& parts, size_t col_offset, size_t row_offset) const {
+  for (auto& part : containers) {
+    part->collectParts(parts, col_offset, row_offset);
+    col_offset += part->columnCount();
   }
 }
 }

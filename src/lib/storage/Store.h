@@ -84,7 +84,7 @@ class Store : public AbstractTable {
   const ColumnMetadata& metadataAt(const size_t column_index,
                                    const size_t row_index = 0,
                                    const table_id_t table_id = 0) const override;
-
+  cpart_t getPart(std::size_t column, std::size_t row) const;
   void setDictionaryAt(AbstractTable::SharedDictionaryPtr dict, size_t column, size_t row = 0, table_id_t table_id = 0)
       override;
   const AbstractTable::SharedDictionaryPtr& dictionaryAt(size_t column, size_t row = 0, table_id_t table_id = 0) const
@@ -124,6 +124,7 @@ class Store : public AbstractTable {
   };
 
 
+  virtual void collectParts(std::list<cpart_t>& parts, size_t col_offset, size_t row_offset) const override;
 
   tbb::concurrent_vector<tx::transaction_cid_t>::iterator cidBeginIteratorForRecovery() {
     return _cidBeginVector.begin();

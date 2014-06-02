@@ -75,6 +75,12 @@ class SimpleStore : public AbstractTable {
     }
   }
 
+  cpart_t getPart(std::size_t column, std::size_t row) const {
+    if (row >= _main->size())
+      STORAGE_NOT_IMPLEMENTED(SimpleStore, dictionaryAt());
+    return _main->getPart(column, row);
+  }
+
   /**
    * @see AbstractTable
    */

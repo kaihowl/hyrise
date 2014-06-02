@@ -44,11 +44,9 @@
             "type": "MergeStore"
         },
         "search" : {
-          "type" : "TableScan",
-          "expression" : "hyrise::Store_FLV_F1_EQ_INT",
-          "withDelta" : true,
-          "f1": 2,
-          "v_f1" : 1
+            "type" : "SimpleTableScan",
+	    "instances": 4,
+            "predicates" : [ { "type": "EQ_V", "table": 0, "f": 2, "value": 1, "vtype": 0 } ]
       }
     },
     "edges" : [

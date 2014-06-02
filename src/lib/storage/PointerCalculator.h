@@ -50,6 +50,13 @@ class PointerCalculator : public AbstractTable, public SharedFactory<PointerCalc
 
   c_atable_ptr_t getTable() const;
   c_atable_ptr_t getActualTable() const;
+  cpart_t getPart(std::size_t column, std::size_t row) const {
+    if (fields)
+      column = fields->at(column);
+    if (pos_list)
+      row = pos_list->at(row);
+    return getTable()->getPart(column, row);
+  }
 
   /**
   * Checks the internal table of the pointer calculator to only contain valid positions.
