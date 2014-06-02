@@ -63,6 +63,15 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
   // this is just there to manage the lifetime of chunks
   // it enables us to safely store references to shared_ptr in the hashtable
   std::shared_ptr<tbb::concurrent_vector<storage::c_atable_ptr_t>> _chunk_tables;
+
+  // pos lists for building result table
+  storage::pos_list_t* _this_rows;
+  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> _other_rows;
+
+  void emitChunk();
+  storage::atable_ptr_t buildResultTable() const;
+  void resetPosLists();
+
 };
 }
 }

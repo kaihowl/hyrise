@@ -39,8 +39,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   field_t f = _indexed_field_definition[_source_index];
 
-  storage::pos_list_t* this_rows = new pos_list_t();
-  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> other_rows;
+  resetPosLists();
 
   for (pos_t row = 0; row < input_table->size(); ++row) {
     //insert into hashtable
@@ -72,20 +71,40 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const storage::AbstractTable*, storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
 
     if (!matching_tables_rows.empty()) {
-      this_rows->insert(this_rows->end(), matching_tables_rows.size(), row);
-      other_rows.insert(other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
+      _this_rows->insert(_this_rows->end(), matching_tables_rows.size(), row);
+      _other_rows.insert(_other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
+    }
+
+    if (_this_rows->size() >= _chunkSize) {
+      emitChunk();
     }
   }
 
-  if (!this_rows->size()) { // no result to produce
-    return;
+  if (_this_rows->size()) { // one final result to produce
+    emitChunk();
   }
 
-  auto this_table_pc = storage::PointerCalculator::create(input_table, std::move(this_rows));
+  //TODO later emit chunks of required chunk size
+  
+  //emits nothing if not both source tables had been available
+
+}
+
+void DoublePipelinedHashJoin::emitChunk() {
+  PipelineEmitter<DoublePipelinedHashJoin>::emitChunk(buildResultTable());
+  resetPosLists();
+}
+
+storage::atable_ptr_t DoublePipelinedHashJoin::buildResultTable() const {
+
+  // TODO we are getting this twice (executePlanOperation)
+  const auto input_table = input.getTable(0);
+
+  auto this_table_pc = storage::PointerCalculator::create(input_table, std::move(_this_rows));
 
   std::unordered_map<const storage::AbstractTable*, pos_list_t> pos_by_tables;
 
-  for (const auto& cur_pair : other_rows) pos_by_tables[cur_pair.first].push_back(cur_pair.second);
+  for (const auto& cur_pair : _other_rows) pos_by_tables[cur_pair.first].push_back(cur_pair.second);
 
   // TODO let's create this table once in the parent op and do some pos_list
   // magic for a pointer calculator on it.
@@ -114,12 +133,12 @@ void DoublePipelinedHashJoin::executePlanOperation() {
   }
 
   storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
-  emitChunk(result);
+  return result;
+}
 
-  //TODO later emit chunks of required chunk size
-  
-  //emits nothing if not both source tables had been available
-
+void DoublePipelinedHashJoin::resetPosLists() {
+  _this_rows = new pos_list_t;
+  _other_rows.clear();
 }
 
 std::shared_ptr<PlanOperation> DoublePipelinedHashJoin::parse(const Json::Value& data) {
