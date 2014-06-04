@@ -34,6 +34,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
   }
 
   const auto input_table = input.getTable(0);
+  const auto input_size = input_table->size();
 
   auto chunk_it = _chunk_tables->push_back(input_table);
   auto chunk_index = std::distance(_chunk_tables->begin(), chunk_it);
@@ -42,53 +43,71 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   resetPosLists();
 
-  for (pos_t row = 0; row < input_table->size(); ++row) {
+  // Insert in hash table in chunks of 100k
+  // TODO make this dependent on the chunk size?
+  for (size_t chunk=0; chunk < input_size / 100000 + 1; ++chunk) {
+
+    // TODO make it an array?
+    std::vector<std::pair<join_key_t, join_value_t>> inserted_items;
+    inserted_items.reserve(100000);
+
     //insert into hashtable
-    //TODO maybe resolve everything to values first
-    // that saves us the get value in the row_hash_functor
-    row_hash_functor<join_key_t> fun((*_chunk_tables)[chunk_index].get(), f, row);
-    storage::type_switch<hyrise_basic_types> ts;
-    join_key_t hash = ts(input_table->typeOfColumn(f), fun);
-    // Store absolute positions
-    join_value_t val = std::make_tuple(_source_index, chunk_index, row);
-    hashtable_t::value_type insert_key(hash, val);
-    _hashtable->insert(insert_key);
+    for (pos_t row = chunk*100000; row < std::min(input_size, (chunk+1)*100000); ++row) {
+      //TODO maybe resolve everything to values first
+      // that saves us the get value in the row_hash_functor
+      row_hash_functor<join_key_t> fun((*_chunk_tables)[chunk_index].get(), f, row);
+      storage::type_switch<hyrise_basic_types> ts;
+      join_key_t hash = ts(input_table->typeOfColumn(f), fun);
+      // Store absolute positions
+      join_value_t val = std::make_tuple(_source_index, chunk_index, row);
+      std::pair<join_key_t, join_value_t> insert_key(hash, val);
+      inserted_items[row-chunk*100000] = insert_key;
+      _hashtable->insert(insert_key);
+    }
+
+    for (pos_t row = chunk*100000; row < std::min(input_size, (chunk+1)*100000); ++row) {
+      hashtable_t::iterator all_matches_start, all_matches_end;
+      auto inserted_item = inserted_items[row-chunk*100000];
+      auto hash = inserted_item.first;
+      std::tie(all_matches_start, all_matches_end) = _hashtable->equal_range(hash);
+      // find our end
+      auto matches_end = std::find(all_matches_start, all_matches_end, hashtable_t::value_type(inserted_item));
+      assert(matches_end != all_matches_end);
+
+      auto num_premature_matches = std::distance(matches_end, all_matches_start);
+      std::vector<hashtable_t::value_type> matching_keys;
+      // TODO is this really necessary? Does remove_copy not do anything like that?
+      matching_keys.reserve(num_premature_matches);
+      // only use matching rows not in our table
+      std::remove_copy_if(all_matches_start, matches_end, back_inserter(matching_keys), [this] (const hashtable_t::value_type& val) { return std::get<0>(val.second) == _source_index; });
+
+      std::vector<std::pair<const size_t, storage::pos_t>> matching_tables_rows;
+      std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const size_t, const storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
+
+      if (!matching_tables_rows.empty()) {
+        _this_rows->insert(_this_rows->end(), matching_tables_rows.size(), row);
+        _other_rows.insert(_other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
+      }
+    }
+
+    // TODO maybe put this in the loop?
+    if (_this_rows->size() >= _chunkSize) {
+      emitChunk();
+    }
 
     // TODO optimize if the other table is not yet available.
 
     // TODO maybe reserve full size before.
-    hashtable_t::iterator all_matches_start, all_matches_end;
-    std::tie(all_matches_start, all_matches_end) = _hashtable->equal_range(hash);
-    // find our end
-    auto matches_end = std::find(all_matches_start, all_matches_end, insert_key);
-    assert(matches_end != all_matches_end);
 
     // TODO maybe reserve full size before.
     // TODO and use standard iterator again
 
-    std::vector<hashtable_t::value_type> matching_keys;
-    // only use matching rows not in our table
-    std::remove_copy_if(all_matches_start, matches_end, back_inserter(matching_keys), [this] (const hashtable_t::value_type& val) { return std::get<0>(val.second) == _source_index; });
-
-    std::vector<std::pair<const size_t, storage::pos_t>> matching_tables_rows;
-    std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const size_t, const storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
-
-    if (!matching_tables_rows.empty()) {
-      _this_rows->insert(_this_rows->end(), matching_tables_rows.size(), row);
-      _other_rows.insert(_other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
-    }
-
-    if (_this_rows->size() >= _chunkSize) {
-      emitChunk();
-    }
   }
 
   if (_this_rows->size()) { // one final result to produce
     emitChunk();
   }
 
-  //TODO later emit chunks of required chunk size
-  
   //emits nothing if not both source tables had been available
 
 }
