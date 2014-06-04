@@ -24,6 +24,7 @@ struct row_hash_functor {
 
   template <typename R>
   inline T operator()() {
+    // TODO in hashtable this is only a getValueId ^^
     return std::hash<R>()(table->getValue<R>(f, row));
   }
 
@@ -50,8 +51,8 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
 
  private:
   // TODO maybe we should use the same hasher as in other multimap here
-  typedef size_t join_key_t ;
-  typedef std::tuple<size_t, const storage::AbstractTable*, storage::pos_t> join_value_t;
+  typedef const size_t join_key_t ;
+  typedef const std::tuple<const size_t, const size_t, const storage::pos_t> join_value_t;
   typedef tbb::concurrent_unordered_multimap<join_key_t, join_value_t> hashtable_t;
   typedef std::shared_ptr<hashtable_t> hashtable_ptr_t;
 
@@ -66,7 +67,7 @@ class DoublePipelinedHashJoin : public PlanOperation, public PipelineObserver<Do
 
   // pos lists for building result table
   storage::pos_list_t* _this_rows;
-  std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> _other_rows;
+  std::vector<std::pair<size_t, storage::pos_t>> _other_rows;
 
   void emitChunk();
   storage::atable_ptr_t buildResultTable() const;

@@ -35,7 +35,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   const auto input_table = input.getTable(0);
 
-  _chunk_tables->push_back(input_table);
+  auto chunk_it = _chunk_tables->push_back(input_table);
+  auto chunk_index = std::distance(_chunk_tables->begin(), chunk_it);
 
   field_t f = _indexed_field_definition[_source_index];
 
@@ -43,11 +44,13 @@ void DoublePipelinedHashJoin::executePlanOperation() {
 
   for (pos_t row = 0; row < input_table->size(); ++row) {
     //insert into hashtable
-    row_hash_functor<join_key_t> fun(input_table.get(), f, row);
+    //TODO maybe resolve everything to values first
+    // that saves us the get value in the row_hash_functor
+    row_hash_functor<join_key_t> fun((*_chunk_tables)[chunk_index].get(), f, row);
     storage::type_switch<hyrise_basic_types> ts;
     join_key_t hash = ts(input_table->typeOfColumn(f), fun);
     // Store absolute positions
-    join_value_t val = std::make_tuple(_source_index, input_table.get(), row);
+    join_value_t val = std::make_tuple(_source_index, chunk_index, row);
     hashtable_t::value_type insert_key(hash, val);
     _hashtable->insert(insert_key);
 
@@ -67,8 +70,8 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     // only use matching rows not in our table
     std::remove_copy_if(all_matches_start, matches_end, back_inserter(matching_keys), [this] (const hashtable_t::value_type& val) { return std::get<0>(val.second) == _source_index; });
 
-    std::vector<std::pair<const storage::AbstractTable*, storage::pos_t>> matching_tables_rows;
-    std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const storage::AbstractTable*, storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
+    std::vector<std::pair<const size_t, storage::pos_t>> matching_tables_rows;
+    std::transform(matching_keys.begin(), matching_keys.end(), back_inserter(matching_tables_rows), [](const hashtable_t::value_type& val) {return std::pair<const size_t, const storage::pos_t>(std::get<1>(val.second), std::get<2>(val.second));});
 
     if (!matching_tables_rows.empty()) {
       _this_rows->insert(_this_rows->end(), matching_tables_rows.size(), row);
@@ -102,7 +105,7 @@ storage::atable_ptr_t DoublePipelinedHashJoin::buildResultTable() const {
 
   auto this_table_pc = storage::PointerCalculator::create(input_table, std::move(_this_rows));
 
-  std::unordered_map<const storage::AbstractTable*, pos_list_t> pos_by_tables;
+  std::unordered_map<size_t, pos_list_t> pos_by_tables;
 
   for (const auto& cur_pair : _other_rows) pos_by_tables[cur_pair.first].push_back(cur_pair.second);
 
@@ -111,12 +114,10 @@ storage::atable_ptr_t DoublePipelinedHashJoin::buildResultTable() const {
   std::vector<storage::c_atable_ptr_t> horizontal_parts;
 
   for (const auto& table_pos_list_pair : pos_by_tables) {
-    const auto& table = table_pos_list_pair.first;
-    // TODO store the iterator instead of the table pointer.
-    const auto& shared_table = std::find_if(_chunk_tables->begin(), _chunk_tables->end(), [&table](const storage::c_atable_ptr_t& val) { return val.get() == table; });
+    const auto& table = (*_chunk_tables)[table_pos_list_pair.first];
     const auto& pos_list = table_pos_list_pair.second;
     // TODO maybe move is wrong here since we did not create the object
-    auto part = storage::PointerCalculator::create(*shared_table, std::move(pos_list));
+    auto part = storage::PointerCalculator::create(table, std::move(pos_list));
     horizontal_parts.push_back(part);
   }
 
