@@ -183,6 +183,7 @@ include $(PROJECT_ROOT)/settings.mk
 BLD ?= debug
 COMPILER ?= g++48
 PLUGINS += ccache
+VTUNE ?= 1
 
 ifeq ($(WITH_COVERAGE),1)
 PLUGINS += coverage
@@ -198,6 +199,11 @@ ifeq ($(WITH_V8),1)
 ifndef V8_BASE_DIRECTORY
 $(error V8_BASE_DIRECTORY is not defined)
 endif
+endif
+
+ifeq ($(VTUNE),1)
+	COMMON_FLAGS += -I/opt/intel/vtune_amplifier_xe/include/ -L/opt/intel/vtune_amplifier_xe/lib64/ -D WITH_VTUNE
+	LDFLAGS += -littnotify -ldl
 endif
 
 include $(PROJECT_ROOT)/makefiles/config.$(COMPILER).mk

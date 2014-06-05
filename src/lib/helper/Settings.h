@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifdef WITH_VTUNE
+#include <ittnotify.h>
+#endif
+
 #define ADD_MEMBER(type, member)                 \
  private:                                        \
   type _##member;                                \
@@ -23,6 +27,10 @@ class Settings {
 
 
   size_t threadpoolSize;
+
+#ifdef WITH_VTUNE
+  __itt_domain *domain;
+#endif
 
   ADD_MEMBER(std::string, ScriptPath);
   ADD_MEMBER(std::string, ProfilePath);
@@ -63,4 +71,10 @@ class Settings {
   std::string getCheckpointDir() {
     return getPersistencyDir() + "/checkpoints/";
   };
+
+#ifdef WITH_VTUNE
+  __itt_domain* getVtuneDomain() {
+    return domain;
+  }
+#endif
 };

@@ -12,6 +12,7 @@
 #include "storage/AbstractHashTable.h"
 #include "storage/AbstractTable.h"
 #include "storage/TableRangeView.h"
+#include "helper/Settings.h"
 
 #include "boost/lexical_cast.hpp"
 #include "log4cxx/logger.h"
@@ -183,7 +184,16 @@ const PlanOperation* PlanOperation::execute() {
     pt.start();
   }
 
+#ifdef WITH_VTUNE
+  __itt_string_handle* shMyTask = __itt_string_handle_create(vname().c_str());
+  __itt_task_begin(Settings::getInstance()->getVtuneDomain(), __itt_null, __itt_null, shMyTask);
+#endif
+
   executePlanOperation();
+
+#ifdef WITH_VTUNE
+  __itt_task_end(Settings::getInstance()->getVtuneDomain());
+#endif
 
   if (recordPerformance)
     pt.stop();

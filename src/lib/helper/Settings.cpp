@@ -22,6 +22,11 @@ Settings::Settings() : threadpoolSize(1) {
   _mkdir(getLogDir());
   _mkdir(getTableDumpDir());
   _mkdir(getCheckpointDir());
+
+#ifdef WITH_VTUNE
+  // vtune domain
+  domain = __itt_domain_create("Hyrise.PlanOperation");
+#endif
 }
 
 size_t Settings::getThreadpoolSize() const { return this->threadpoolSize; }
