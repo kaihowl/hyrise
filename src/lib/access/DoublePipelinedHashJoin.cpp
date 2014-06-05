@@ -74,7 +74,7 @@ void DoublePipelinedHashJoin::executePlanOperation() {
       auto matches_end = std::find(all_matches_start, all_matches_end, hashtable_t::value_type(inserted_item));
       assert(matches_end != all_matches_end);
 
-      auto num_premature_matches = std::distance(matches_end, all_matches_start);
+      auto num_premature_matches = std::distance(all_matches_start, matches_end);
       std::vector<hashtable_t::value_type> matching_keys;
       // TODO is this really necessary? Does remove_copy not do anything like that?
       matching_keys.reserve(num_premature_matches);
