@@ -52,6 +52,10 @@ void DoublePipelinedHashJoin::executePlanOperation() {
     inserted_items.reserve(100000);
 
     //insert into hashtable
+#ifdef WITH_VTUNE
+    __itt_string_handle* hashStart = __itt_string_handle_create("hashing");
+    __itt_task_begin(Settings::getInstance()->getVtuneDomain(), __itt_null, __itt_null, hashStart);
+#endif
     for (pos_t row = chunk*100000; row < std::min(input_size, (chunk+1)*100000); ++row) {
       //TODO maybe resolve everything to values first
       // that saves us the get value in the row_hash_functor
@@ -64,6 +68,11 @@ void DoublePipelinedHashJoin::executePlanOperation() {
       inserted_items[row-chunk*100000] = insert_key;
       _hashtable->insert(insert_key);
     }
+#ifdef WITH_VTUNE
+    __itt_task_end(Settings::getInstance()->getVtuneDomain());
+    __itt_string_handle* equalStart = __itt_string_handle_create("equal");
+    __itt_task_begin(Settings::getInstance()->getVtuneDomain(), __itt_null, __itt_null, equalStart);
+#endif
 
     for (pos_t row = chunk*100000; row < std::min(input_size, (chunk+1)*100000); ++row) {
       hashtable_t::iterator all_matches_start, all_matches_end;
@@ -89,6 +98,9 @@ void DoublePipelinedHashJoin::executePlanOperation() {
         _other_rows.insert(_other_rows.end(), matching_tables_rows.begin(), matching_tables_rows.end());
       }
     }
+#ifdef WITH_VTUNE
+    __itt_task_end(Settings::getInstance()->getVtuneDomain());
+#endif
 
     // TODO maybe put this in the loop?
     if (_this_rows->size() >= _chunkSize) {
@@ -118,6 +130,10 @@ void DoublePipelinedHashJoin::emitChunk() {
 }
 
 storage::atable_ptr_t DoublePipelinedHashJoin::buildResultTable() const {
+#ifdef WITH_VTUNE
+  __itt_string_handle* buildResult = __itt_string_handle_create("buildResult");
+  __itt_task_begin(Settings::getInstance()->getVtuneDomain(), __itt_null, __itt_null, buildResult);
+#endif
 
   // TODO we are getting this twice (executePlanOperation)
   const auto input_table = input.getTable(0);
@@ -153,6 +169,9 @@ storage::atable_ptr_t DoublePipelinedHashJoin::buildResultTable() const {
   }
 
   storage::atable_ptr_t result = std::make_shared<storage::MutableVerticalTable>(parts);
+#ifdef WITH_VTUNE
+  __itt_task_end(Settings::getInstance()->getVtuneDomain());
+#endif
   return result;
 }
 
